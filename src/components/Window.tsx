@@ -169,10 +169,66 @@ export default function Window() {
         }}
       >
         <div
-          className="bg-blue-300 cursor-move rounded-t"
+          className="bg-black cursor-move rounded-t flex items-center justify-between"
           onMouseDown={onMouseDown}
         >
-          Header
+          <span className="p-1 text-white">Header</span>
+          <div className="flex gap-4 cursor-auto h-full items-center">
+            <svg
+              className="w-8 h-full text-white hover:bg-white/20 p-2"
+              aria-hidden="true"
+              xmlns="http://www.w3.org/2000/svg"
+              width="32"
+              height="32"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M5 12h14"
+              />
+            </svg>
+            <svg
+              className="w-8 h-full text-white p-2 hover:bg-white/20"
+              aria-hidden="true"
+              xmlns="http://www.w3.org/2000/svg"
+              width="32"
+              height="32"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M8 5a1 1 0 0 1 1-1h11a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-1a1 1 0 1 1 0-2h1V6H9a1 1 0 0 1-1-1Z"
+                clip-rule="evenodd"
+              />
+              <path
+                fill-rule="evenodd"
+                d="M4 7a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2H4Zm0 11v-5.5h11V18H4Z"
+                clip-rule="evenodd"
+              />
+            </svg>
+            <svg
+              className="w-8 h-full text-white p-2 hover:bg-white/20"
+              aria-hidden="true"
+              xmlns="http://www.w3.org/2000/svg"
+              width="32"
+              height="32"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18 17.94 6M18 18 6.06 6"
+              />
+            </svg>
+          </div>
         </div>
         <div className="contenido">
           <p>Este es el contenido de la ventana.</p>
