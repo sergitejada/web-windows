@@ -157,7 +157,7 @@ export default function Window() {
         />
       )}
       <div
-        className="bg-red-300 window shadow-xl rounded"
+        className="window shadow-lg rounded"
         style={{
           top: `${posicion.top}px`,
           left: `${posicion.left}px`,
