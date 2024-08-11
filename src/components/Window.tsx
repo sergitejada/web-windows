@@ -1,16 +1,25 @@
-import { useState, useEffect, useCallback, SetStateAction } from "react";
+import { useState, useEffect, useCallback } from "react";
 import "./window.css";
 
 export default function Window() {
   const [width, setWidth] = useState(320);
   const [height, setHeight] = useState(320);
   const [posicion, setPosicion] = useState({ top: 300, left: 300 });
+  const [minimizedPosition, setMinimizedPosition] = useState({
+    left: 0,
+    bottom: 0,
+  });
+
   const [dragging, setDragging] = useState(false);
   const [resizing, setResizing] = useState(null);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [preview, setPreview] = useState(null); // null, 'left', or 'right'
+  const [isMaximized, setIsMaximized] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
+  const [previousState, setPreviousState] = useState(null);
 
   const onMouseDown = (e) => {
+    if (isMaximized || isMinimized) return;
     e.preventDefault();
     setDragging(true);
     setOffset({
@@ -20,6 +29,7 @@ export default function Window() {
   };
 
   const onResizeStart = (direction) => (e) => {
+    if (isMaximized || isMinimized) return;
     e.preventDefault();
     e.stopPropagation();
     setResizing(direction);
@@ -31,7 +41,7 @@ export default function Window() {
 
   const handleMouseMove = useCallback(
     (e) => {
-      if (dragging) {
+      if (dragging && !isMaximized && !isMinimized) {
         e.preventDefault();
         const newLeft = e.clientX - offset.x;
         const newTop = e.clientY - offset.y;
@@ -52,7 +62,7 @@ export default function Window() {
           top: newTop,
           left: newLeft,
         });
-      } else if (resizing) {
+      } else if (resizing && !isMaximized && !isMinimized) {
         e.preventDefault();
         const deltaX = e.clientX - offset.x;
         const deltaY = e.clientY - offset.y;
@@ -77,7 +87,7 @@ export default function Window() {
         });
       }
     },
-    [dragging, resizing, offset]
+    [dragging, resizing, offset, isMaximized, isMinimized]
   );
 
   const handleMouseUp = useCallback(() => {
@@ -96,6 +106,48 @@ export default function Window() {
 
     setPreview(null);
   }, [preview]);
+
+  const handleMaximize = () => {
+    if (isMaximized) {
+      // Restaurar al estado anterior
+      setIsMaximized(false);
+      if (previousState) {
+        setWidth(previousState.width);
+        setHeight(previousState.height);
+        setPosicion(previousState.posicion);
+      }
+    } else {
+      // Guardar el estado actual y maximizar
+      setPreviousState({ width, height, posicion });
+      setIsMaximized(true);
+      setWidth(window.innerWidth);
+      setHeight(window.innerHeight);
+      setPosicion({ top: 0, left: 0 });
+    }
+    setIsMinimized(false);
+  };
+
+  const handleMinimize = () => {
+    if (isMinimized) {
+      // Restaurar al estado anterior
+      setIsMinimized(false);
+      if (previousState) {
+        setWidth(previousState.width);
+        setHeight(previousState.height);
+        setPosicion(previousState.posicion);
+      }
+    } else {
+      // Guardar el estado actual y minimizar
+      setPreviousState({ width, height, posicion });
+      setIsMinimized(true);
+      setHeight(30); // Altura de la barra de título
+      setPosicion({
+        left: minimizedPosition.left,
+        top: window.innerHeight - minimizedPosition.bottom - 30,
+      });
+    }
+    setIsMaximized(false);
+  };
 
   useEffect(() => {
     const handleGlobalMouseMove = (e) => {
@@ -121,6 +173,15 @@ export default function Window() {
     };
   }, [handleMouseMove, handleMouseUp, dragging, resizing]);
 
+  useEffect(() => {
+    if (isMinimized) {
+      setPosicion({
+        left: minimizedPosition.left,
+        top: window.innerHeight - minimizedPosition.bottom - 30,
+      });
+    }
+  }, [isMinimized, minimizedPosition]);
+
   const resizeHandles = ["n", "e", "s", "w", "ne", "nw", "se", "sw"].map(
     (dir) => (
       <div
@@ -141,7 +202,7 @@ export default function Window() {
 
   return (
     <>
-      {preview && (
+      {preview && !isMinimized && (
         <div
           className="preview"
           style={{
@@ -157,7 +218,7 @@ export default function Window() {
         />
       )}
       <div
-        className="window shadow-lg rounded"
+        className={`window shadow-lg rounded ${isMinimized ? "minimized" : ""}`}
         style={{
           top: `${posicion.top}px`,
           left: `${posicion.left}px`,
@@ -166,74 +227,90 @@ export default function Window() {
           transition: "opacity 0.2s",
           width: `${width}px`,
           height: `${height}px`,
+          overflow: isMinimized ? "hidden" : "visible",
+          cursor: isMinimized ? "default" : "auto",
         }}
+        onClick={isMinimized ? handleMinimize : undefined}
       >
         <div
           className="bg-black cursor-move rounded-t flex items-center justify-between"
           onMouseDown={onMouseDown}
+          style={{
+            cursor: isMinimized ? "pointer" : "move",
+            userSelect: "none", // Esto evita la selección de texto
+            WebkitUserSelect: "none", // Para navegadores basados en WebKit
+            MozUserSelect: "none", // Para Firefox
+            msUserSelect: "none", // Para IE/Edge
+          }}
         >
           <span className="p-1 text-white">Header</span>
-          <div className="flex gap-4 cursor-auto h-full items-center">
-            <svg
-              className="w-8 h-full text-white hover:bg-white/20 p-2"
-              aria-hidden="true"
-              xmlns="http://www.w3.org/2000/svg"
-              width="32"
-              height="32"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke="currentColor"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M5 12h14"
-              />
-            </svg>
-            <svg
-              className="w-8 h-full text-white p-2 hover:bg-white/20"
-              aria-hidden="true"
-              xmlns="http://www.w3.org/2000/svg"
-              width="32"
-              height="32"
-              fill="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                fill-rule="evenodd"
-                d="M8 5a1 1 0 0 1 1-1h11a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-1a1 1 0 1 1 0-2h1V6H9a1 1 0 0 1-1-1Z"
-                clip-rule="evenodd"
-              />
-              <path
-                fill-rule="evenodd"
-                d="M4 7a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2H4Zm0 11v-5.5h11V18H4Z"
-                clip-rule="evenodd"
-              />
-            </svg>
-            <svg
-              className="w-8 h-full text-white p-2 hover:bg-white/20"
-              aria-hidden="true"
-              xmlns="http://www.w3.org/2000/svg"
-              width="32"
-              height="32"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke="currentColor"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M6 18 17.94 6M18 18 6.06 6"
-              />
-            </svg>
+          {!isMinimized && (
+            <div className="flex gap-4 cursor-auto h-full items-center">
+              <svg
+                className="w-8 h-full text-white hover:bg-white/20 p-2"
+                onClick={handleMinimize}
+                aria-hidden="true"
+                xmlns="http://www.w3.org/2000/svg"
+                width="32"
+                height="32"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M5 12h14"
+                />
+              </svg>
+              <svg
+                className="w-8 h-full text-white p-2 hover:bg-white/20"
+                onClick={handleMaximize}
+                aria-hidden="true"
+                xmlns="http://www.w3.org/2000/svg"
+                width="32"
+                height="32"
+                fill="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M8 5a1 1 0 0 1 1-1h11a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-1a1 1 0 1 1 0-2h1V6H9a1 1 0 0 1-1-1Z"
+                  clipRule="evenodd"
+                />
+                <path
+                  fillRule="evenodd"
+                  d="M4 7a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2H4Zm0 11v-5.5h11V18H4Z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              <svg
+                className="w-8 h-full text-white p-2 hover:bg-white/20"
+                aria-hidden="true"
+                xmlns="http://www.w3.org/2000/svg"
+                width="32"
+                height="32"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M6 18 17.94 6M18 18 6.06 6"
+                />
+              </svg>
+            </div>
+          )}
+        </div>
+        {!isMinimized && (
+          <div className="contenido">
+            <p>Este es el contenido de la ventana.</p>
           </div>
-        </div>
-        <div className="contenido">
-          <p>Este es el contenido de la ventana.</p>
-        </div>
-        {resizeHandles}
+        )}
+        {!isMaximized && !isMinimized && resizeHandles}
       </div>
     </>
   );
