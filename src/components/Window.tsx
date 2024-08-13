@@ -9,6 +9,10 @@ interface Position {
 }
 
 interface WindowProps {
+  id: string;
+  onMinimize: (id: string) => void;
+  onClose: (id: string) => void;
+  minimizedIndex: number;
   initialWidth?: number;
   initialheight?: number;
   initialPosition?: Position;
@@ -24,17 +28,21 @@ const DEFAULT_WINDOW_STATE = {
   minimizedPosition: { left: 0, bottom: 10, right: 0, top: 0 },
 };
 
-export default function Window({
+const Window = ({
+  id,
   initialWidth = DEFAULT_WINDOW_STATE.width,
   initialheight = DEFAULT_WINDOW_STATE.height,
   initialPosition = DEFAULT_WINDOW_STATE.position,
   initialMinimizedPosition = DEFAULT_WINDOW_STATE.minimizedPosition,
   icon,
   title,
-}: WindowProps) {
+  onMinimize,
+  onClose,
+  minimizedIndex,
+}: WindowProps) => {
   const [width, setWidth] = useState<number>(initialWidth);
   const [height, setHeight] = useState<number>(initialheight);
-  const [posicion, setPosicion] = useState<Position>(initialPosition);
+  const [position, setPosition] = useState<Position>(initialPosition);
   const [minimizedPosition, setMinimizedPosition] = useState<Position>(
     initialMinimizedPosition
   );
@@ -52,8 +60,8 @@ export default function Window({
     e.preventDefault();
     setDragging(true);
     setOffset({
-      x: e.clientX - posicion.left,
-      y: e.clientY - posicion.top,
+      x: e.clientX - position.left,
+      y: e.clientY - position.top,
     });
   };
 
@@ -87,9 +95,11 @@ export default function Window({
           setPreview(null);
         }
 
-        setPosicion({
+        setPosition({
           top: newTop,
           left: newLeft,
+          bottom: 0,
+          right: 0,
         });
       } else if (resizing && !isMaximized && !isMinimized) {
         e.preventDefault();
@@ -101,13 +111,13 @@ export default function Window({
           setWidth((width) => Math.max(width + deltaX, 100));
         if (resizing.includes("w")) {
           setWidth((width) => Math.max(width - deltaX, 100));
-          setPosicion((pos) => ({ ...pos, left: pos.left + deltaX }));
+          setPosition((pos) => ({ ...pos, left: pos.left + deltaX }));
         }
         if (resizing.includes("s"))
           setHeight((height) => Math.max(height + deltaY, 100));
         if (resizing.includes("n")) {
           setHeight((height) => Math.max(height - deltaY, 100));
-          setPosicion((pos) => ({ ...pos, top: pos.top + deltaY }));
+          setPosition((pos) => ({ ...pos, top: pos.top + deltaY }));
         }
 
         setOffset({
@@ -124,11 +134,11 @@ export default function Window({
     setResizing(null);
 
     if (preview === "left") {
-      setPosicion({ top: 0, left: 0 });
+      setPosition({ top: 0, left: 0 });
       setWidth(window.innerWidth / 2);
       setHeight(window.innerHeight);
     } else if (preview === "right") {
-      setPosicion({ top: 0, left: window.innerWidth / 2 });
+      setPosition({ top: 0, left: window.innerWidth / 2 });
       setWidth(window.innerWidth / 2);
       setHeight(window.innerHeight);
     }
@@ -143,15 +153,15 @@ export default function Window({
       if (previousState) {
         setWidth(previousState.width);
         setHeight(previousState.height);
-        setPosicion(previousState.posicion);
+        setPosition(previousState.posicion);
       }
     } else {
       // Guardar el estado actual y maximizar
-      setPreviousState({ width, height, posicion });
+      setPreviousState({ width, height, position });
       setIsMaximized(true);
       setWidth(window.innerWidth);
       setHeight(window.innerHeight);
-      setPosicion({ top: 0, left: 0 });
+      setPosition({ top: 0, left: 0, bottom: 0, right: 0 });
     }
     setIsMinimized(false);
   };
@@ -163,19 +173,13 @@ export default function Window({
       if (previousState) {
         setWidth(previousState.width);
         setHeight(previousState.height);
-        setPosicion(previousState.posicion);
+        setPosition(previousState.position);
       }
     } else {
-      // Guardar el estado actual y minimizar
-      setPreviousState({ width, height, posicion });
+      setPreviousState({ width, height, position });
       setIsMinimized(true);
-      setHeight(30); // Altura de la barra de título
-      setPosicion({
-        left: minimizedPosition.left,
-        top: window.innerHeight - minimizedPosition.bottom - 30,
-      });
     }
-    setIsMaximized(false);
+    onMinimize(id);
   };
 
   useEffect(() => {
@@ -204,14 +208,21 @@ export default function Window({
 
   useEffect(() => {
     if (isMinimized) {
-      setPosicion({
-        left: minimizedPosition.left,
-        top: window.innerHeight - minimizedPosition.bottom - 30,
-        right: 0,
+      const minimizedWidth = 200; // Ancho de la ventana minimizada
+      const minimizedHeight = 40; // Altura de la ventana minimizada
+      const bottomMargin = 10; // Margen desde el fondo de la pantalla
+      const spacing = 10; // Espacio entre ventanas minimizadas
+
+      setPosition({
+        left: minimizedIndex * (minimizedWidth + spacing),
+        top: window.innerHeight - minimizedHeight - bottomMargin,
         bottom: 0,
+        right: 0,
       });
+      setWidth(minimizedWidth);
+      setHeight(minimizedHeight);
     }
-  }, [isMinimized, minimizedPosition]);
+  }, [isMinimized, minimizedIndex]);
 
   const resizeHandles = ["n", "e", "s", "w", "ne", "nw", "se", "sw"].map(
     (dir) => (
@@ -251,12 +262,12 @@ export default function Window({
       <div
         className={`window shadow-lg ${isMinimized ? "minimized" : ""}`}
         style={{
-          top: `${posicion.top}px`,
-          left: `${posicion.left}px`,
+          top: `${position.top}px`,
+          left: `${position.left}px`,
           position: "absolute",
           opacity: dragging ? 0.7 : 1,
           transition: "opacity 0.2s",
-          width: isMinimized ? (icon ? "50px" : "200px") : `${width}px`,
+          width: isMinimized ? (icon ? "40px" : "200px") : `${width}px`,
           height: isMinimized ? "40px" : `${height}px`,
           overflow: "visible",
           cursor: isMinimized ? "default" : "auto",
@@ -264,7 +275,9 @@ export default function Window({
         onClick={isMinimized ? handleMinimize : undefined}
       >
         <div
-          className="bg-black cursor-move flex items-center justify-between"
+          className={`bg-black cursor-move flex items-center justify-center ${
+            isMinimized ? "justify-center" : "justify-between"
+          }`}
           onMouseDown={onMouseDown}
           style={{
             cursor: isMinimized ? "pointer" : "move",
@@ -273,7 +286,7 @@ export default function Window({
             MozUserSelect: "none", // Para Firefox
             msUserSelect: "none", // Para IE/Edge
             height: "40px", // Header más grande
-            padding: "0 10px",
+            // padding: "0 10px",
             width: "100%",
           }}
         >
@@ -364,4 +377,48 @@ export default function Window({
       </div>
     </>
   );
-}
+};
+
+const WindowManager = () => {
+  const [windows, setWindows] = useState<Array<{ id: string; title: string }>>(
+    []
+  );
+  const [minimizedWindows, setMinimizedWindows] = useState<string[]>([]);
+
+  const addWindow = (title: string) => {
+    const newWindow = { id: Date.now().toString(), title };
+    setWindows([...windows, newWindow]);
+  };
+
+  const removeWindow = (id: string) => {
+    setWindows(windows.filter((window) => window.id !== id));
+    setMinimizedWindows(minimizedWindows.filter((winId) => winId !== id));
+  };
+
+  const handleMinimize = (id: string) => {
+    if (minimizedWindows.includes(id)) {
+      setMinimizedWindows(minimizedWindows.filter((winId) => winId !== id));
+    } else {
+      setMinimizedWindows([...minimizedWindows, id]);
+    }
+  };
+
+  return (
+    <div className="window-manager">
+      <button onClick={() => addWindow("New Window")}>Add Window</button>
+      {windows.map((window, index) => (
+        <Window
+          key={window.id}
+          id={window.id}
+          title={window.title}
+          onMinimize={handleMinimize}
+          onClose={removeWindow}
+          minimizedIndex={minimizedWindows.indexOf(window.id)}
+          isMinimized={minimizedWindows.includes(window.id)}
+        />
+      ))}
+    </div>
+  );
+};
+
+export { Window, WindowManager };
