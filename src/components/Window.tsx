@@ -1,19 +1,48 @@
 import { useState, useEffect, useCallback } from "react";
 import "./window.css";
 
-export default function Window() {
-  const [width, setWidth] = useState(320);
-  const [height, setHeight] = useState(320);
-  const [posicion, setPosicion] = useState({ top: 300, left: 300 });
-  const [minimizedPosition, setMinimizedPosition] = useState({
-    left: 0,
-    bottom: 0,
-  });
+interface Position {
+  top: number;
+  left: number;
+  bottom: number;
+  right: number;
+}
+
+interface WindowProps {
+  initialWidth?: number;
+  initialheight?: number;
+  initialPosition?: Position;
+  initialMinimizedPosition?: Position;
+  icon?: React.ReactNode;
+  title: string;
+}
+
+const DEFAULT_WINDOW_STATE = {
+  width: 320,
+  height: 320,
+  position: { top: 300, left: 300, bottom: 0, right: 0 },
+  minimizedPosition: { left: 0, bottom: 10, right: 0, top: 0 },
+};
+
+export default function Window({
+  initialWidth = DEFAULT_WINDOW_STATE.width,
+  initialheight = DEFAULT_WINDOW_STATE.height,
+  initialPosition = DEFAULT_WINDOW_STATE.position,
+  initialMinimizedPosition = DEFAULT_WINDOW_STATE.minimizedPosition,
+  icon,
+  title,
+}: WindowProps) {
+  const [width, setWidth] = useState<number>(initialWidth);
+  const [height, setHeight] = useState<number>(initialheight);
+  const [posicion, setPosicion] = useState<Position>(initialPosition);
+  const [minimizedPosition, setMinimizedPosition] = useState<Position>(
+    initialMinimizedPosition
+  );
 
   const [dragging, setDragging] = useState(false);
   const [resizing, setResizing] = useState(null);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
-  const [preview, setPreview] = useState(null); // null, 'left', or 'right'
+  const [preview, setPreview] = useState(null);
   const [isMaximized, setIsMaximized] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [previousState, setPreviousState] = useState(null);
@@ -178,6 +207,8 @@ export default function Window() {
       setPosicion({
         left: minimizedPosition.left,
         top: window.innerHeight - minimizedPosition.bottom - 30,
+        right: 0,
+        bottom: 0,
       });
     }
   }, [isMinimized, minimizedPosition]);
@@ -218,22 +249,22 @@ export default function Window() {
         />
       )}
       <div
-        className={`window shadow-lg rounded ${isMinimized ? "minimized" : ""}`}
+        className={`window shadow-lg ${isMinimized ? "minimized" : ""}`}
         style={{
           top: `${posicion.top}px`,
           left: `${posicion.left}px`,
           position: "absolute",
           opacity: dragging ? 0.7 : 1,
           transition: "opacity 0.2s",
-          width: `${width}px`,
-          height: `${height}px`,
-          overflow: isMinimized ? "hidden" : "visible",
+          width: isMinimized ? (icon ? "50px" : "200px") : `${width}px`,
+          height: isMinimized ? "40px" : `${height}px`,
+          overflow: "visible",
           cursor: isMinimized ? "default" : "auto",
         }}
         onClick={isMinimized ? handleMinimize : undefined}
       >
         <div
-          className="bg-black cursor-move rounded-t flex items-center justify-between"
+          className="bg-black cursor-move flex items-center justify-between"
           onMouseDown={onMouseDown}
           style={{
             cursor: isMinimized ? "pointer" : "move",
@@ -241,9 +272,28 @@ export default function Window() {
             WebkitUserSelect: "none", // Para navegadores basados en WebKit
             MozUserSelect: "none", // Para Firefox
             msUserSelect: "none", // Para IE/Edge
+            height: "40px", // Header más grande
+            padding: "0 10px",
+            width: "100%",
           }}
         >
-          <span className="p-1 text-white">Header</span>
+          <div className="flex items-center h-full">
+            {icon && (
+              <div
+                className="text-white flex items-center justify-center"
+                style={{
+                  width: isMinimized ? "30px" : "24px",
+                  height: isMinimized ? "30px" : "24px",
+                  marginRight: isMinimized ? "0" : "10px",
+                }}
+              >
+                {icon}
+              </div>
+            )}
+            {(!isMinimized || !icon) && (
+              <span className="text-white">{title}</span>
+            )}
+          </div>
           {!isMinimized && (
             <div className="flex gap-4 cursor-auto h-full items-center">
               <svg
