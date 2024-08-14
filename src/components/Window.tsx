@@ -19,6 +19,7 @@ interface WindowProps {
   initialMinimizedPosition?: Position;
   icon?: React.ReactNode;
   title: string;
+  content: React.ReactNode;
 }
 
 const DEFAULT_WINDOW_STATE = {
@@ -36,9 +37,12 @@ const Window = ({
   initialMinimizedPosition = DEFAULT_WINDOW_STATE.minimizedPosition,
   icon,
   title,
+  content,
   onMinimize,
   onClose,
+  content,
   minimizedIndex,
+  isMinimized,
 }: WindowProps) => {
   const [width, setWidth] = useState<number>(initialWidth);
   const [height, setHeight] = useState<number>(initialheight);
@@ -106,7 +110,6 @@ const Window = ({
         const deltaX = e.clientX - offset.x;
         const deltaY = e.clientY - offset.y;
 
-        console.log(resizing.includes("se"));
         if (resizing.includes("e"))
           setWidth((width) => Math.max(width + deltaX, 100));
         if (resizing.includes("w")) {
@@ -379,46 +382,4 @@ const Window = ({
   );
 };
 
-const WindowManager = () => {
-  const [windows, setWindows] = useState<Array<{ id: string; title: string }>>(
-    []
-  );
-  const [minimizedWindows, setMinimizedWindows] = useState<string[]>([]);
-
-  const addWindow = (title: string) => {
-    const newWindow = { id: Date.now().toString(), title };
-    setWindows([...windows, newWindow]);
-  };
-
-  const removeWindow = (id: string) => {
-    setWindows(windows.filter((window) => window.id !== id));
-    setMinimizedWindows(minimizedWindows.filter((winId) => winId !== id));
-  };
-
-  const handleMinimize = (id: string) => {
-    if (minimizedWindows.includes(id)) {
-      setMinimizedWindows(minimizedWindows.filter((winId) => winId !== id));
-    } else {
-      setMinimizedWindows([...minimizedWindows, id]);
-    }
-  };
-
-  return (
-    <div className="window-manager">
-      <button onClick={() => addWindow("New Window")}>Add Window</button>
-      {windows.map((window, index) => (
-        <Window
-          key={window.id}
-          id={window.id}
-          title={window.title}
-          onMinimize={handleMinimize}
-          onClose={removeWindow}
-          minimizedIndex={minimizedWindows.indexOf(window.id)}
-          isMinimized={minimizedWindows.includes(window.id)}
-        />
-      ))}
-    </div>
-  );
-};
-
-export { Window, WindowManager };
+export { Window };
